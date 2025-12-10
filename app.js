@@ -1,105 +1,75 @@
-new Vue({
-  el: '#lessonsclasses',
+const app = new Vue({
+  el: '#app',
   data: {
-    sortAttribute: 'subject',
-    sortOrder: 'asc',
-    showCart: false,
+    lessons: [],
+    cart: [],
     name: '',
     phone: '',
-    checkoutMessage: '',
-    lessons: [],
-    cart: []
+    errorMsg: '',
+    successMsg: ''
   },
-  computed: {
-    sortedLessons() {
-      return this.lessons.slice().sort((a, b) => {
-        let aVal = a[this.sortAttribute];
-        let bVal = b[this.sortAttribute];
-        if (typeof aVal === 'string') {
-          aVal = aVal.toLowerCase();
-          bVal = bVal.toLowerCase();
-        }
-        return this.sortOrder === 'asc'
-          ? aVal > bVal ? 1 : -1
-          : aVal < bVal ? 1 : -1;
-      });
-    },
-    validName() {
-      return /^[A-Za-z\s]+$/.test(this.name);
-    },
-    validPhone() {
-      return /^[0-9]+$/.test(this.phone);
-    }
+  created() {
+    this.fetchLessons();
   },
   methods: {
-    toggleCart() {
-      this.showCart = !this.showCart;
+    async fetchLessons() {
+      try {
+        const res = await fetch('/lessons');
+        this.lessons = await res.json();
+      } catch (err) {
+        console.error(err);
+      }
     },
     addToCart(lesson) {
       if (lesson.spaces > 0) {
-        lesson.spaces--;
         this.cart.push(lesson);
+        lesson.spaces--;
       }
     },
-    removeFromCart(index, lesson) {
-      lesson.spaces++;
+    removeFromCart(index) {
+      const lesson = this.cart[index];
+      this.lessons.find(l => l._id === lesson._id).spaces++;
       this.cart.splice(index, 1);
     },
-    toggleSortOrder() {
-      this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+    canCheckout() {
+      return /^[a-zA-Z\s]+$/.test(this.name) && /^[0-9]+$/.test(this.phone);
     },
-    checkout() {
-      const orderPayload = {
-        name: this.name,
-        phone: this.phone,
-        items: this.cart.map(item => ({
-          lessonId: item._id,
-          subject: item.subject,
-          quantity: 1
-        }))
-      };
+    async submitOrder() {
+      if (!this.canCheckout()) {
+        this.errorMsg = "Please enter valid name and phone number.";
+        this.successMsg = '';
+        return;
+      }
 
-      // Save order
-      fetch('http://localhost:3000/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderPayload)
-      })
-      .then(res => res.json())
-      .then(data => {
-        // Update each lesson in backend
-        this.cart.forEach(item => {
-          const newSpaces = item.spaces;
-          fetch(`http://localhost:3000/lessons/${item._id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ spaces: newSpaces })
-          });
+      try {
+        const response = await fetch('/order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: this.name,
+            phone: this.phone,
+            cart: this.cart
+          })
         });
 
-        this.checkoutMessage = `Order submitted successfully for ${this.name}!`;
-        this.cart = [];
-        this.name = '';
-        this.phone = '';
-        setTimeout(() => {
-          this.checkoutMessage = '';
-          this.showCart = false;
+        const result = await response.json();
+
+        if (response.ok) {
+          this.successMsg = "✅ Order submitted successfully!";
+          this.errorMsg = '';
+          this.cart = [];
+          this.name = '';
+          this.phone = '';
           this.fetchLessons();
-        }, 2500);
-      });
-    },
-    fetchLessons() {
-      fetch('http://localhost:3000/lessons')
-        .then(res => res.json())
-        .then(data => {
-          this.lessons = data;
-        });
-    },
-    onImageError(e) {
-      e.target.src = 'images/default.jpg';
+        } else {
+          this.errorMsg = result.error || "Order failed.";
+          this.successMsg = '';
+        }
+      } catch (err) {
+        console.error(err);
+        this.errorMsg = "Server error. Please try again.";
+        this.successMsg = '';
+      }
     }
-  },
-  mounted() {
-    this.fetchLessons();
   }
 });
