@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LessonsClasses</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet"
+    href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+</head>
+
+<body>
+
+<div id="lessonsclasses" class="container my-5">
+  <h1 class="title"> LessonsClasses </h1>
+
+  <!-- Cart Toggle Button -->
+  <div class="text-center mb-4">
+    <button class="btn toggle-btn" @click="toggleCart" :disabled="cart.length === 0">
+      {{ showCart ? 'Back to Lessons' : 'View Cart' }} ({{ cart.length }})
+    </button>
+  </div>
+
+  <!-- Lesson List -->
+  <div v-if="!showCart">
+
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <label for="sortAttribute">Sort By:</label>
+        <select v-model="sortAttribute" class="form-control">
+          <option value="subject">Subject</option>
+          <option value="location">Location</option>
+          <option value="price">Price</option>
+          <option value="spaces">Spaces</option>
+        </select>
+      </div>
+
+      <div class="col-md-6 d-flex align-items-end">
+        <button class="btn toggle-btn w-100" @click="toggleSortOrder">
+          {{ sortOrder === 'asc' ? 'Ascending' : 'Descending' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4 mb-4" v-for="lesson in sortedLessons" :key="lesson.id">
+        <div class="card h-100">
+          <img :src="lesson.image" @error="onImageError($event)" class="card-img-top" alt="Lesson Image">
+          <div class="card-body">
+            <h5 class="card-title">{{ lesson.subject }}</h5>
+            <p class="card-text">
+              <strong>Location:</strong> {{ lesson.location }}<br>
+              <strong>Price:</strong> ${{ lesson.price }}<br>
+              <strong>Spaces Left:</strong> {{ lesson.spaces }}
+            </p>
+          </div>
+          <div class="card-footer">
+            <button class="btn add-btn btn-block" @click="addToCart(lesson)" :disabled="lesson.spaces === 0">
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cart View -->
+  <div v-else>
+    <div class="card cart-card p-4">
+      <h3>Your Cart</h3>
+      <ul class="list-group mb-4">
+        <li class="list-group-item d-flex justify-content-between align-items-center" v-for="(item, index) in cart" :key="index">
+          <span>{{ item.subject }} - {{ item.location }} - ${{ item.price }}</span>
+          <button class="btn btn-sm btn-danger" @click="removeFromCart(index, item)">Remove</button>
+        </li>
+      </ul>
+
+      <!-- Checkout Form -->
+      <div class="checkout-form mt-4">
+        <div class="form-group">
+          <label>Name:</label>
+          <input type="text" v-model="name" class="form-control" placeholder="Enter your name">
+          <small v-if="name && !validName" class="text-danger">Name must contain letters only</small>
+        </div>
+
+        <div class="form-group">
+          <label>Phone:</label>
+          <input type="text" v-model="phone" class="form-control" placeholder="Enter your phone number">
+          <small v-if="phone && !validPhone" class="text-danger">Phone must be numbers only</small>
+        </div>
+
+        <div class="text-center">
+          <button class="btn checkout-btn" :disabled="!validName || !validPhone" @click="checkout">
+            Proceed to Checkout ✔️
+          </button>
+          <p v-if="checkoutMessage" class="mt-3 text-success font-weight-bold">{{ checkoutMessage }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
